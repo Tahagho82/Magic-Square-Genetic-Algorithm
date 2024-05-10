@@ -1,6 +1,6 @@
 #include <bits/stdc++.h>
 using namespace std;
-const int SIZE = 3; // سایز مربع جادویی
+const int SIZE = 4; // سایز مربع جادویی
 
 // مشخصات هر کروموزوم
 struct Individual
@@ -39,7 +39,7 @@ vector<vector<int>> generate_random_square()
 // حساب کردن فیتنس برای یک کروموزوم
 int calculate_fitness(const vector<vector<int>> &square)
 {
-    int targetSum = SIZE * (SIZE * SIZE + 1) / 2;
+    int target_sum = SIZE * (SIZE * SIZE + 1) / 2;
     int fitness = 0;
 
     // حساب کردن محموع سطر
@@ -50,7 +50,7 @@ int calculate_fitness(const vector<vector<int>> &square)
         {
             rowSum += square[i][j];
         }
-        fitness += abs(rowSum - targetSum);
+        fitness += abs(rowSum - target_sum);
     }
 
     // حساب کردن محموع ستون
@@ -61,19 +61,19 @@ int calculate_fitness(const vector<vector<int>> &square)
         {
             colSum += square[i][j];
         }
-        fitness += abs(colSum - targetSum);
+        fitness += abs(colSum - target_sum);
     }
 
     // حساب کردن محموع قطر ها
-    int diagonalSum1 = 0;
-    int diagonalSum2 = 0;
+    int diagonal_sum1 = 0;
+    int diagonal_sum2 = 0;
     for (int i = 0; i < SIZE; ++i)
     {
-        diagonalSum1 += square[i][i];
-        diagonalSum2 += square[i][SIZE - 1 - i];
+        diagonal_sum1 += square[i][i];
+        diagonal_sum2 += square[i][SIZE - 1 - i];
     }
-    fitness += abs(diagonalSum1 - targetSum);
-    fitness += abs(diagonalSum2 - targetSum);
+    fitness += abs(diagonal_sum1 - target_sum);
+    fitness += abs(diagonal_sum2 - target_sum);
 
     return fitness;
 }
@@ -140,13 +140,13 @@ vector<Individual> create_initial_population(int populationSize)
 // انتخاب بهترین های جامعه با توجه به حدود تعریف شده
 vector<Individual> selection(const vector<Individual> &population, int elite_size)
 {
-    vector<Individual> sortedPopulation = population;
-    sort(sortedPopulation.begin(), sortedPopulation.end(), [](const Individual &a, const Individual &b)
+    vector<Individual> sorted_population = population;
+    sort(sorted_population.begin(), sorted_population.end(), [](const Individual &a, const Individual &b)
          { return a.fitness < b.fitness; });
 
-    vector<Individual> selectedPopulation(sortedPopulation.begin(), sortedPopulation.begin() + elite_size);
+    vector<Individual> selected_population(sorted_population.begin(), sorted_population.begin() + elite_size);
 
-    return selectedPopulation;
+    return selected_population;
 }
 
 // تولید نسل بعد با تعداد خواسته شده
@@ -183,17 +183,17 @@ vector<Individual> generate_next_generation(const vector<Individual> &population
 // پیدا کردن بهترین کروموزوم
 Individual find_best_individual(const vector<Individual> &population)
 {
-    Individual bestIndividual = population[0];
+    Individual best_individual = population[0];
 
     for (const Individual &individual : population)
     {
-        if (individual.fitness < bestIndividual.fitness)
+        if (individual.fitness < best_individual.fitness)
         {
-            bestIndividual = individual;
+            best_individual = individual;
         }
     }
 
-    return bestIndividual;
+    return best_individual;
 }
 
 bool is_in_answers(const Individual &best_individual, const vector<Individual> &answers)
@@ -208,19 +208,48 @@ bool is_in_answers(const Individual &best_individual, const vector<Individual> &
     return false;
 }
 
+void print_square_answers(const vector<Individual> &answers)
+{
+    ofstream fw("answers.txt", ofstream::out);
+    if (fw.is_open())
+    {
+        for (int i = 0; i < answers.size(); i++)
+        {
+            fw << "Square fitness : " << answers[i].fitness << "  Answer <" << i + 1 << "> : " << endl;
+            for (int j = 0; j < SIZE; ++j)
+            {
+                for (int k = 0; k < SIZE; ++k)
+                {
+                    fw << answers[i].square[j][k] << " ";
+                }
+                fw << endl;
+            }
+            fw << endl
+               << endl;
+        }
+        fw.close();
+    }
+    else
+    {
+        cout << "Problem With opening file!\n";
+    }
+}
+
 int main()
 {
     const int POPULATION_SIZE = 1000; // تعداد جمعیت
-    const int ELITE_SIZE = 20;        // تعداد برتر حامعه برای نسل بعد
-    const int OFFSPRING_SIZE = 80;    // تعداد فرزندان جدید در هر نسل
-    const int MAX_GENERATIONS = 1000; // ماکزیمم تعداد نسل ها
+    const int ELITE_SIZE = 100;       // تعداد برتر حامعه برای نسل بعد
+    const int OFFSPRING_SIZE = 900;   // تعداد فرزندان جدید در هر نسل
+    const int MAX_GENERATIONS = 500; // ماکزیمم تعداد نسل ها
+
+    srand((unsigned)(time(0)));
 
     vector<Individual> population = create_initial_population(POPULATION_SIZE);
 
     vector<Individual> answers;
-
     int generation = 0;
     Individual best_individual;
+
     while (generation < MAX_GENERATIONS)
     {
         vector<Individual> next_generation = generate_next_generation(population, ELITE_SIZE, OFFSPRING_SIZE);
@@ -228,43 +257,29 @@ int main()
         best_individual = find_best_individual(population);
         ++generation;
 
-         
         /*
+
         راه حلی برای اینکه جواب های مختلف چاپ شود
-        به این صورت که جواب پیدا شده را پاک میکند و جای آن را با یک کروموزوم رندم پر میکند 
-        تا آن جواب از لیست بیرون بیاید و دنبال جواب های جدید باشد
+        به این صورت که کل جامعه را که به جواب رسیده را بیرون انداخته و دنبال جواب جدید میگردد
+
         */
         if (best_individual.fitness == 0 && !(is_in_answers(best_individual, answers)))
         {
             answers.push_back(best_individual);
-            population.pop_back();
-            Individual replace_individual;
-            replace_individual.square = generate_random_square();
-            replace_individual.fitness = calculate_fitness(replace_individual.square);
-            population.push_back(replace_individual);
+            population.clear();
+            population = create_initial_population(POPULATION_SIZE);
         }
 
         cout << "Generation : " << generation << "  Fitness: " << best_individual.fitness << endl;
+        // cout << best_individual.fitness << endl;
     }
 
-    cout << "Best individual:" << endl;
+    // نمایش جواب نهایی
+    print_square_answers(answers);
 
-    // نمایش جواب نهایی 
-    for (int i = 0; i < answers.size(); i++)
-    {
-        for (int j = 0; j < SIZE; ++j)
-        {
-            for (int k = 0; k < SIZE; ++k)
-            {
-                cout << best_individual.square[j][k] << " ";
-            }
-            cout << endl;
-        }
-        cout << endl
-             << endl;
-    }
+    cout << "last Fitness: " << best_individual.fitness << endl;
 
-    cout << "Fitness: " << best_individual.fitness << endl;
+    system("pause");
 
     return 0;
 }
